@@ -2,6 +2,7 @@
   "name": "redux-essentials-example",
   "version": "1.0.0",
   "private": true,
+  "proxy": "http://localhost:3001",
   "dependencies": {
     "@mswjs/data": "^0.8.4",
     "@reduxjs/toolkit": "^1.6.1",
@@ -10,6 +11,7 @@
     "@testing-library/user-event": "^13.5.0",
     "classnames": "^2.2.6",
     "date-fns": "^2.12.0",
+    "express": "^4.18.1",
     "faker": "^4.1.0",
     "miragejs": "^0.1.35",
     "mock-socket": "^9.0.3",

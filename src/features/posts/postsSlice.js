@@ -16,7 +16,7 @@ const initialState = postsAdapter.getInitialState({
 })
 
 export const fetchPosts = createAsyncThunk('posts/fetchPosts', async () => {
-  const response = await client.get('/fakeApi/posts')
+  const response = await client.get('/realApi/posts')
   return response.data
 })
 
