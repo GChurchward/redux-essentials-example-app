@@ -7,21 +7,6 @@ app.get('/hello-world-route-woot', (req, res) => {
 })
 
 
-// id: primaryKey(nanoid),
-// firstName: String,
-// lastName: String,
-// name: String,
-// username: String,
-// posts: manyOf('post'),
-// post: {
-//   id: primaryKey(nanoid),
-//   title: String,
-//   date: String,
-//   content: String,
-//   reactions: oneOf('reaction'),
-//   comments: manyOf('comment'),
-//   user: oneOf('user'),
-// },
 const fakePost1={
     id: 123,
     title: "FIrst post title",
@@ -32,12 +17,12 @@ const fakePost1={
     user: null,
 }
 const fakeUser1 = {
-id: 123,
-firstName: "totally a first name",
-lastName: "totally a last name",
-name: "Also a name1",
-username: "wiskibois@gmail.com",
-posts: [fakePost1],
+  id: 123,
+  firstName: "totally a first name",
+  lastName: "totally a last name",
+  name: "Also a name1",
+  username: "wiskibois@gmail.com",
+  posts: [fakePost1],
 }
 const usersInTheDatabase = [fakeUser1]
 const postsInTheDatabase = [fakePost1]
