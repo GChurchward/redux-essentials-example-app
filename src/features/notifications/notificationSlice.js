@@ -17,8 +17,10 @@ export const fetchNotifications = createAsyncThunk(
     const [latestNotification] = allNotifications
     const latestTimestamp = latestNotification ? latestNotification.date : ''
     const response = await client.get(
-      `/fakeApi/notification?since=${latestTimestamp}`
+      `/realApi/notification?since=${latestTimestamp}`
     )
+    console.log('response')
+    console.log(response)
     return response.data
   }
 )
@@ -41,7 +43,9 @@ const notificationsSlice = createSlice({
         notification.isNew = !notification.read
       })
       // Sort with newest first
-      state.sort((a, b) => b.date.localeCompare(a.date))
+      console.log('state')
+      console.log(state.entities)
+      //state.sort((a, b) => b.date.localeCompare(a.date))
     })
   },
 })

@@ -10,10 +10,10 @@ const usersAdapter = createEntityAdapter()
 const initialState = usersAdapter.getInitialState()
 
 export const fetchUsers = createAsyncThunk('users/fetchUsers', async () => {
-  console.log({fetching:1})
+  console.log({ fetching: 1 })
   const response = await client.get('/realApi/users')
   // const response = await client.get('/fakeApi/users')
-  console.log({DATA:response.data})
+  console.log({ DATA: response.data })
   return response.data
 })
 
