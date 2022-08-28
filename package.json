@@ -2,6 +2,7 @@
   "name": "redux-essentials-example",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "proxy": "http://localhost:3001",
   "dependencies": {
     "@mswjs/data": "^0.8.4",

@@ -1,20 +1,26 @@
 import { rest, setupWorker } from 'msw'
 import { factory, oneOf, manyOf, primaryKey } from '@mswjs/data'
-import { nanoid } from '@reduxjs/toolkit'
+import pkg from '@reduxjs/toolkit'
 import faker from 'faker'
 import seedrandom from 'seedrandom'
 import { Server as MockSocketServer } from 'mock-socket'
 import { setRandom } from 'txtgen'
-
+import express from 'express'
 import { parseISO } from 'date-fns'
 
-const express = require('express')
+export {}
+const { nanoid } = pkg
+
 const app = express()
 const port = 3001
 
 app.get('/hello-world-route-woot', (req, res) => {
   res.send('Hello World!')
 })
+
+const NUM_USERS = 3
+const POSTS_PER_USER = 3
+const RECENT_NOTIFICATIONS_DAYS = 7
 
 const db = factory({
   user: {
@@ -50,59 +56,119 @@ const db = factory({
     post: oneOf('post'),
   },
 })
+const createUserData = () => {
+  const firstName = faker.name.firstName()
+  const lastName = faker.name.lastName()
 
-const fakePost1 = {
-  id: 123,
-  title: 'FIrst post title',
-  date: new Date().toISOString(),
-  content: 'Totally the content of a post :fire:',
-  reactions: [],
-  comments: [],
-  user: null,
+  return {
+    firstName,
+    lastName,
+    name: `${firstName} ${lastName}`,
+    username: faker.internet.userName(),
+  }
 }
-const fakeUser1 = {
-  id: 123,
-  firstName: 'totally a first name',
-  lastName: 'totally a last name',
-  name: 'Also a name1',
-  username: 'wiskibois@gmail.com',
-  posts: [fakePost1],
-}
-const fakeNotification1 = {
-  id: 1,
-  date: new Date().toISOString(),
-  message: 'template',
-  user: fakeUser1.id,
-}
-const usersInTheDatabase = [fakeUser1]
-const postsInTheDatabase = [fakePost1]
-const notificationsInTheDatabase = [fakeNotification1]
 
-//get individual post ids
-app.get('/realApi/posts/:postId', (req, res) => {
-  const post = db.postsInTheDatabase.findFirst({
-    where: { id: { equals: req.params.postId } },
-  })
-  console.log(postId)
-  res.json(post)
+const createPostData = (user) => {
+  return {
+    title: faker.lorem.words(),
+    date: faker.date.recent(RECENT_NOTIFICATIONS_DAYS).toISOString(),
+    user,
+    content: faker.lorem.paragraphs(),
+    reactions: db.reaction.create(),
+  }
+}
+
+// Create an initial set of users and posts
+for (let i = 0; i < NUM_USERS; i++) {
+  const author = db.user.create(createUserData())
+
+  for (let j = 0; j < POSTS_PER_USER; j++) {
+    const newPost = createPostData(author)
+    db.post.create(newPost)
+  }
+}
+
+const serializePost = (post) => ({
+  ...post,
+  user: post.user.id,
 })
-//app.get('/realApi/posts/:postId/comments', )
-app.get('/realApi/users', (req, res) => {
-  res.json(usersInTheDatabase)
-})
-app.get('/realApi/posts/:postId/comments', (req, res) => {
-  const post = db.postsInTheDatabase.findFirst({
-    where: { id: { equals: req.params.postId } },
-  })
-  console.log(postId)
-  res.json(post)
-})
-app.get('/realApi/posts', (req, res) => {
-  res.json(postsInTheDatabase)
-})
-app.get('/realAPI/notification', (req, res) => {
-  res.json(notificationsInTheDatabase)
-})
+app.use(express.json())
+export const handlers = [
+  app.get('/realApi/posts', function (req, res) {
+    const posts = db.post.getAll().map(serializePost)
+    return res.json(posts)
+  }),
+  app.post('/realApi/posts', function (req, res) {
+    const data = req.body
+    // if (data.content === 'error') {
+    //   return res.json('Server error saving this post!')
+    // }
+
+    data.date = new Date().toISOString()
+
+    const user = db.user.findFirst({ where: { id: { equals: data.user } } })
+    data.user = user
+    data.reactions = db.reaction.create()
+
+    const post = db.post.create(data)
+    return res.json(serializePost(post))
+  }),
+  app.get('/realApi/posts/:postId', function (req, res) {
+    const post = db.post.findFirst({
+      where: { id: { equals: req.params.postId } },
+    })
+    return res.json(serializePost(post))
+  }),
+  app.patch('/realApi/posts/:postId', (req, res, ctx) => {
+    const { id, ...data } = req.body
+    const updatedPost = db.post.update({
+      where: { id: { equals: req.params.postId } },
+      data,
+    })
+    return res.json(serializePost(updatedPost))
+  }),
+
+  app.get('/realApi/posts/:postId/comments', (req, res, ctx) => {
+    const post = db.post.findFirst({
+      where: { id: { equals: req.params.postId } },
+    })
+    return res.json({ comments: post.comments })
+  }),
+
+  app.post('/realApi/posts/:postId/reactions', (req, res, ctx) => {
+    const postId = req.params.postId
+    const reaction = req.body.reaction
+    const post = db.post.findFirst({
+      where: { id: { equals: postId } },
+    })
+
+    const updatedPost = db.post.update({
+      where: { id: { equals: postId } },
+      data: {
+        reactions: {
+          ...post.reactions,
+          [reaction]: (post.reactions[reaction] += 1),
+        },
+      },
+    })
+
+    return res.json(serializePost(updatedPost))
+  }),
+  app.get('/realApi/notifications', (req, res, ctx) => {
+    const numNotifications = getRandomInt(1, 5)
+
+    let notifications = generateRandomNotifications(
+      undefined,
+      numNotifications,
+      db
+    )
+
+    return res.json(notifications)
+  }),
+  app.get('/realApi/users', (req, res, ctx) => {
+    return res.json(db.user.getAll())
+  }),
+]
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
