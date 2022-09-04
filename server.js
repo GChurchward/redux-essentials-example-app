@@ -7,6 +7,7 @@ import { Server as MockSocketServer } from 'mock-socket'
 import { setRandom } from 'txtgen'
 import express from 'express'
 import { parseISO } from 'date-fns'
+import mongoose from 'mongoose';
 
 export {}
 const { nanoid } = pkg
@@ -21,7 +22,33 @@ app.get('/hello-world-route-woot', (req, res) => {
 const NUM_USERS = 3
 const POSTS_PER_USER = 3
 const RECENT_NOTIFICATIONS_DAYS = 7
+mongoose.connect('mongodb://localhost/my_database',{auth: {
+        username:'root',
+        password:'rootpassword'
+    },
+    authSource:"admin",
+    useUnifiedTopology: true,
+    useNewUrlParser: true});
+const Schema = mongoose.Schema;
+const ObjectId = Schema.ObjectId;
 
+const User = new Schema({
+  id: ObjectId,
+  firstName: String,
+    lastName: String,
+    name: String,
+    username: String,
+    //posts: manyOf('post'),
+});
+const MyUserModel = mongoose.model('User', User);
+// const Post = new Schema({
+//   id: ObjectId,
+//   title: String,
+//     date: String,
+//     content: String,
+//     reactions: oneOf('reaction'),
+//     comments: manyOf('comment'),
+//     user: oneOf('user'),
 const db = factory({
   user: {
     id: primaryKey(nanoid),
@@ -80,8 +107,10 @@ const createPostData = (user) => {
 
 // Create an initial set of users and posts
 for (let i = 0; i < NUM_USERS; i++) {
-  const author = db.user.create(createUserData())
-
+  // const author = db.user.create(createUserData())
+  //const author = await MyUserModel.save();
+  const user = new MyUserModel(createUserData())
+  await user.save()
   for (let j = 0; j < POSTS_PER_USER; j++) {
     const newPost = createPostData(author)
     db.post.create(newPost)
@@ -170,6 +199,8 @@ export const handlers = [
   }),
 ]
 
-app.listen(port, () => {
+app.listen(port, async () => {
+
+  
   console.log(`Example app listening on port ${port}`)
 })
