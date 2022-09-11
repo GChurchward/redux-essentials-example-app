@@ -33,7 +33,7 @@ const Schema = mongoose.Schema;
 const ObjectId = Schema.ObjectId;
 
 const User = new Schema({
-  id: ObjectId,
+  userId: ObjectId,
   firstName: String,
     lastName: String,
     name: String,
@@ -41,48 +41,74 @@ const User = new Schema({
     //posts: manyOf('post'),
 });
 const MyUserModel = mongoose.model('User', User);
-// const Post = new Schema({
-//   id: ObjectId,
-//   title: String,
+ 
+const Post = new Schema({
+   postId: ObjectId,
+   title: String,
+     date: String,
+     content: String,
+     //reactions: oneOf('reaction'),
+     //comments: manyOf('comment'),
+     //user: MyUserModel,
+ })
+
+ const MyPostModel = mongoose.model('Post', Post);
+
+ const Comments = new Schema({
+   commentId: ObjectId,
+   date: String,
+    text: String,
+    //post: oneOf('post'),
+ })
+
+ const MyCommentModel = mongoose.model('Comments', Comments)
+
+const Reaction = new Schema({
+   reactionId: ObjectId,
+   thumbsUp: Number,
+    hooray: Number,
+    heart: Number,
+    rocket: Number,
+    eyes: Number,
+    //post: postId,
+})
+
+const MyReactionModel = mongoose.model('Reaction', Reaction)
+
+// const db = factory({
+//   user: {
+//     id: primaryKey(nanoid),
+//     firstName: String,
+//     lastName: String,
+//     name: String,
+//     username: String,
+//     posts: manyOf('post'),
+//   },
+//   post: {
+//     id: primaryKey(nanoid),
+//     title: String,
 //     date: String,
 //     content: String,
 //     reactions: oneOf('reaction'),
 //     comments: manyOf('comment'),
 //     user: oneOf('user'),
-const db = factory({
-  user: {
-    id: primaryKey(nanoid),
-    firstName: String,
-    lastName: String,
-    name: String,
-    username: String,
-    posts: manyOf('post'),
-  },
-  post: {
-    id: primaryKey(nanoid),
-    title: String,
-    date: String,
-    content: String,
-    reactions: oneOf('reaction'),
-    comments: manyOf('comment'),
-    user: oneOf('user'),
-  },
-  comment: {
-    id: primaryKey(String),
-    date: String,
-    text: String,
-    post: oneOf('post'),
-  },
-  reaction: {
-    id: primaryKey(nanoid),
-    thumbsUp: Number,
-    hooray: Number,
-    heart: Number,
-    rocket: Number,
-    eyes: Number,
-    post: oneOf('post'),
-  },
-})
+//   },
+//   comment: {
+//     id: primaryKey(String),
+//     date: String,
+//     text: String,
+//     post: oneOf('post'),
+//   },
+//   reaction: {
+//     id: primaryKey(nanoid),
+//     thumbsUp: Number,
+//     hooray: Number,
+//     heart: Number,
+//     rocket: Number,
+//     eyes: Number,
+//     post: oneOf('post'),
+//   },
+// })
 const createUserData = () => {
   const firstName = faker.name.firstName()
   const lastName = faker.name.lastName()
@@ -101,7 +127,8 @@ const createPostData = (user) => {
     date: faker.date.recent(RECENT_NOTIFICATIONS_DAYS).toISOString(),
     user,
     content: faker.lorem.paragraphs(),
-    reactions: db.reaction.create(),
+    //reactions: db.reaction.create(),
+    reaction: MyReactionModel(),
   }
 }
 
@@ -112,19 +139,21 @@ for (let i = 0; i < NUM_USERS; i++) {
   const user = new MyUserModel(createUserData())
   await user.save()
   for (let j = 0; j < POSTS_PER_USER; j++) {
-    const newPost = createPostData(author)
-    db.post.create(newPost)
+    const newPost = createPostData(user)
+    // db.post.create(newPost)
+    new MyPostModel((newPost))
   }
 }
 
-const serializePost = (post) => ({
-  ...post,
-  user: post.user.id,
-})
+//const serializePost = (post) => ({
+ // ...post,
+  //user: post.user.id,
+//})
 app.use(express.json())
 export const handlers = [
   app.get('/realApi/posts', function (req, res) {
-    const posts = db.post.getAll().map(serializePost)
+    //const posts = db.post.getAll().map(serializePost)
+    const posts = MyPostModel //.map(serializePost)
     return res.json(posts)
   }),
   app.post('/realApi/posts', function (req, res) {
@@ -195,7 +224,8 @@ export const handlers = [
     return res.json(notifications)
   }),
   app.get('/realApi/users', (req, res, ctx) => {
-    return res.json(db.user.getAll())
+    //return res.json(db.user.getAll())
+    return res.json(MyUserModel())
   }),
 ]
 
