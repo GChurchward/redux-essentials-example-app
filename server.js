@@ -22,7 +22,6 @@ const POSTS_PER_USER = 3;
 const RECENT_NOTIFICATIONS_DAYS = 7;
 mongoose.connect(
   "mongodb://localhost/my_database",
-
   {
     auth: {
       username: "root",
@@ -41,28 +40,19 @@ const User = new Schema({
   lastName: String,
   name: String,
   username: String,
-  // posts: manyOf('post'),
 });
-const MyUserModel = mongoose.model("User", User);
 
 const Post = new Schema({
   title: String,
-  date: String,
+  date: Date,
   content: String,
   authorId: ObjectId,
-  //reactions: oneOf('reaction'),
-  //comments: manyOf('comment'),
 });
-
-const MyPostModel = mongoose.model("Post", Post);
 
 const Comments = new Schema({
-  date: String,
+  date: Date,
   text: String,
-  //post: oneOf('post'),
 });
-
-const MyCommentModel = mongoose.model("Comments", Comments);
 
 const Reaction = new Schema({
   thumbsUp: Number,
@@ -70,44 +60,14 @@ const Reaction = new Schema({
   heart: Number,
   rocket: Number,
   eyes: Number,
-  //postId: postId,
 });
 
+const MyUserModel = mongoose.model("User", User);
+const MyPostModel = mongoose.model("Post", Post);
+const MyCommentModel = mongoose.model("Comments", Comments);
 const MyReactionModel = mongoose.model("Reaction", Reaction);
-const db = factory({
-  user: {
-    id: primaryKey(nanoid),
-    firstName: String,
-    lastName: String,
-    name: String,
-    username: String,
-    posts: manyOf("post"),
-  },
-  post: {
-    id: primaryKey(nanoid),
-    title: String,
-    date: String,
-    content: String,
-    reactions: oneOf("reaction"),
-    comments: manyOf("comment"),
-    user: oneOf("user"),
-  },
-  comment: {
-    id: primaryKey(String),
-    date: String,
-    text: String,
-    post: oneOf("post"),
-  },
-  reaction: {
-    id: primaryKey(nanoid),
-    thumbsUp: Number,
-    hooray: Number,
-    heart: Number,
-    rocket: Number,
-    eyes: Number,
-    post: oneOf("post"),
-  },
-});
+
+
 const createUserData = () => {
   const firstName = faker.name.firstName();
   const lastName = faker.name.lastName();
@@ -127,112 +87,101 @@ const createPostData = (user) => {
     userId: user._id,
     authorId: user._id,
     content: faker.lorem.paragraphs(),
-    //reactions: db.reaction.create(),
-    // reaction: new MyReactionModel(),
   };
 };
 
 // Create an initial set of users and posts
 for (let i = 0; i < NUM_USERS; i++) {
-  // const author = db.user.create(createUserData())
-  //const author = await MyUserModel.save();
   const user = new MyUserModel(createUserData());
   await user.save();
   for (let j = 0; j < POSTS_PER_USER; j++) {
     const almostNewPost = createPostData(user);
     const newPost = new MyPostModel(almostNewPost);
-    console.log({ newPost, user, almostNewPost });
     await newPost.save();
   }
 }
 
-const serializePost = (post) => ({
-  ...post,
-  user: post.user.id,
-});
 app.use(express.json());
 export const handlers = [
   app.get("/realApi/posts", async function (req, res) {
-    const posts = await MyPostModel.find();
-    // const posts = db.post.getAll().map(serializePost)
-    // const posts = MyPostModel //.map(serializePost)
+    /*
+     * 1. Get posts
+     * 2. get the author id for each post
+     * 3. get the uathor for each post
+     * 4. attach the author to each post
+     * 5. send the posts with authors attached to the web client.
+     */
+    const posts = await MyPostModel.find().lean();
     const postsWithAuthors = await Promise.all(
       posts.map(async (p) => {
-        const author = await MyUserModel.findOne({ _id: p.authorId })
-        return {...p,author}
+        const author = await MyUserModel.findOne({ _id: p.authorId }).lean();
+        return { ...p, author, reactions: [] };
       })
     );
-    console.log({postsWithAuthors})
-    return res.json(postsWithAuthors.map((p) => ({ ...p._doc, reactions: [] })));
+    return res.json(postsWithAuthors);
   }),
-  app.post("/realApi/posts", function (req, res) {
-    const data = req.body;
-    // if (data.content === 'error') {
-    //   return res.json('Server error saving this post!')
-    // }
-
-    data.date = new Date().toISOString();
-
-    const user = db.user.findFirst({ where: { id: { equals: data.user } } });
-    data.user = user;
-    data.reactions = db.reaction.create();
-
-    const post = db.post.create(data);
-    return res.json(serializePost(post));
+  app.post("/realApi/posts", async function (req, res) {
+    /**
+     * 1. Save post to datyabase
+     * 1. return new post to web client
+    */
+    const almostMyNewPost = new MyPostModel({
+      date: new Date(),
+      content: req.body.content,
+      title: req.body.title,
+      authorId: req.body.user
+    })
+    const myNewPost = await almostMyNewPost.save()
+    return res.json(myNewPost);
   }),
   app.get("/realApi/posts/:postId", function (req, res) {
-    const post = db.post.findFirst({
-      where: { id: { equals: req.params.postId } },
-    });
-    return res.json(serializePost(post));
+    /*
+     * 1. Find the post in the db
+     * 1. Find the author in the db
+     * 1. attach the autho to the post
+     * 1. send post to the web client
+    */
+    return res.json(post);
   }),
   app.patch("/realApi/posts/:postId", (req, res, ctx) => {
-    const { id, ...data } = req.body;
-    const updatedPost = db.post.update({
-      where: { id: { equals: req.params.postId } },
-      data,
-    });
-    return res.json(serializePost(updatedPost));
+    /**
+     * 1. Find the post in the db
+     * 1. Update the post
+     * 1. Save the post to the db
+     * 1. Return the updated post - with attached author - to the web client
+     */
+    return res.json(updatedPost);
   }),
 
   app.get("/realApi/posts/:postId/comments", (req, res, ctx) => {
-    const post = db.post.findFirst({
-      where: { id: { equals: req.params.postId } },
-    });
+    /**
+    * 1. Find the post in the db
+    * 1. Find all comments for the post
+    * 1. Return the comments
+    */
     return res.json({ comments: post.comments });
   }),
 
   app.post("/realApi/posts/:postId/reactions", (req, res, ctx) => {
-    const postId = req.params.postId;
-    const reaction = req.body.reaction;
-    const post = db.post.findFirst({
-      where: { id: { equals: postId } },
-    });
-
-    const updatedPost = db.post.update({
-      where: { id: { equals: postId } },
-      data: {
-        reactions: {
-          ...post.reactions,
-          [reaction]: (post.reactions[reaction] += 1),
-        },
-      },
-    });
-
-    return res.json(serializePost(updatedPost));
+    /**
+    * 1. Find the post in the db
+    * 1. Find all reactions for the post
+    * 1. Return the reactions
+    */
   }),
   app.get("/realApi/notifications", (req, res, ctx) => {
-    // const numNotifications = getRandomInt(1, 5);
 
-    // let notifications = generateRandomNotifications(
-    //   undefined,
-    //   numNotifications,
-    //   db
-    // );
-
+    /**
+    * 1. Find notifications
+    * 1. Return the notifications
+    */
     return res.json([{ poo: 1 }]);
   }),
   app.get("/realApi/users", async (req, res, ctx) => {
+    /**
+    * 1. Find users
+    * 1. return users
+    */
     const userResponse = await MyUserModel.find();
     return res.json(userResponse);
   }),

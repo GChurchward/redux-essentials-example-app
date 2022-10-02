@@ -7,7 +7,8 @@ import {
 import { client } from '../../api/client'
 
 const postsAdapter = createEntityAdapter({
-  sortComparer: (a, b) => b.date.localeCompare(a.date),
+  selectId: (post) => post._id,
+  sortComparer: (postA, postB) => postA.date.localeCompare(postB.date),
 })
 
 const initialState = postsAdapter.getInitialState({
@@ -66,7 +67,24 @@ const postsSlice = createSlice({
         state.status = 'failed'
         state.error = action.error.message
       })
-      .addCase(addNewPost.fulfilled, postsAdapter.addOne)
+      .addCase(addNewPost.fulfilled, (s, e) => {
+        /**
+         * Server sends json to client
+         * Date gets converted to strings in json
+         * JSON arrives at client
+         * Client tries to do date operations with string - that represents a date
+         * It crashes
+         * 
+         * 
+         * ... NOW 
+         * 
+         * We convert the "date string" to a real date.
+         * Nothing crashes no more.
+         * 
+         */
+        e.date = new Date(e.date)
+        return postsAdapter.addOne(s, e)
+      })
   },
 })
 

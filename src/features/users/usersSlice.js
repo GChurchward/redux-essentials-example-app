@@ -5,7 +5,9 @@ import {
 } from '@reduxjs/toolkit'
 import { client } from '../../api/client'
 
-const usersAdapter = createEntityAdapter()
+const usersAdapter = createEntityAdapter({
+  selectId: (user) => user._id,
+})
 
 const initialState = usersAdapter.getInitialState()
 
