@@ -67,7 +67,6 @@ const MyPostModel = mongoose.model("Post", Post);
 const MyCommentModel = mongoose.model("Comments", Comments);
 const MyReactionModel = mongoose.model("Reaction", Reaction);
 
-
 const createUserData = () => {
   const firstName = faker.name.firstName();
   const lastName = faker.name.lastName();
@@ -149,6 +148,9 @@ export const handlers = [
      * 1. Update the post
      * 1. Save the post to the db
      * 1. Return the updated post - with attached author - to the web client
+     */
+    /*
+     * STEFFAN/GLEN -> This is the route we want to hit to update the post!!!
      */
     return res.json(updatedPost);
   }),

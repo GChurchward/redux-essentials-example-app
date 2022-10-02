@@ -29,6 +29,10 @@ export const SinglePostPage = ({ match }) => {
         </div>
         <p className="post-content">{post.content}</p>
         <ReactionButtons post={post} />
+        {/* 
+          - STEFFAN/GLEN - This is where we want to DO SOMETHING that fires a network call to the route.
+          - Look at the "Create post" machinery for inspiration
+        */}
         <Link to={`/editPost/${post._id}`} className="button">
           Edit Post
         </Link>
